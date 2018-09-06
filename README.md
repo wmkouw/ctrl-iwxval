@@ -1,16 +1,16 @@
-# Covariate shift: controlled importance-weighted risk
+# Covariate shift: control variates
 
 This repository contains experiments and code accompanying the paper:
 
-"A control variate for the importance-weighted risk estimator"
+"A control variate for importance-weighted cross-validation under covariate shift."
 
 which is currently under review.
 
-## Usage
+## Contents:
 
-- __experiment-*__ contains scripts for running experiments reported in the paper.
-- __data__ contains a script for obtaining and processing data used in the paper.
+- __experiments__ contains scripts for running experiments reported in the paper.
 - __util__ contains utility functions and algorithms.
 
-## Dependencies:
-- 
+## Contact:
+
+Questions, comments, and bugs can be submitted to the [issues tracker](https://github.com/wmkouw/covshift-ctrlvar/issues).
