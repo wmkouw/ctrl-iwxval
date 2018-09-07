@@ -10,10 +10,21 @@ mkdir('viz');
 %% Experimental parameters
 
 % Number of repetitions
-nR = 1e5;
+nR = 1e5    ;
 
 % Whether to save figures
 sav = true;
+
+%% Visualization parameters
+
+% Font size
+fS = 20;
+
+% Marker size
+mS = 20;
+
+% Line width
+lW = 4;
 
 %% Problem setting
 
@@ -77,10 +88,8 @@ W = zeros(N, nR);
 Rh_S = zeros(nR,1);
 Rh_W = zeros(nR,1);
 Rh_T = zeros(nR,1);
-Rh_CW = zeros(nR,1);
-Rh_C1 = zeros(nR,1);
-betaW = zeros(nR,1);
-beta1 = zeros(nR,1);
+Rh_C = zeros(nR,1);
+beta = zeros(nR,1);
 
 for r = 1:nR
     
@@ -118,115 +127,105 @@ for r = 1:nR
     Rh_T(r) = mean((Z*th - u).^2, 1);
     
     % Estimate beta coefficient
-    betaW(r) = mean(((X*th - y).^2.*W(:, r) - mean((X*th - y).^2 .* W(:, r), 1)) .* (W(:, r) - mean(W(:, r), 1)), 1) ./ mean((W(:, r) - mean(W(:, r), 1)).^2,1);
-    beta1(r) = mean(((X*th - y).^2.*W(:, r) - mean((X*th - y).^2 .* W(:, r), 1)) .* (W(:, r) - 1), 1) ./ mean((W(:, r) - 1).^2,1);
-    Rh_CW(r) = mean((X*th - y).^2 .* W(:, r) - betaW(r)*(W(:,r) - 1), 1);
-    Rh_C1(r) = mean((X*th - y).^2 .* W(:, r) - beta1(r)*(W(:,r) - 1), 1);
+    weighted_loss = (X*th - y).^2.*W(:, r);
+    a_i = (weighted_loss - mean(weighted_loss, 1));
+    b_i = (W(:, r) - mean(W(:, r), 1));
+    beta(r) = sum(a_i .* b_i, 1) ./ sum(b_i.^2,1);
+    
+    % Compute controlled estimate
+    Rh_C(r) = mean((X*th - y).^2 .* W(:, r) - beta(r)*(W(:,r) - 1), 1);
     
 end
 
+%% Compute properties of weight sets
+
+maxW = max(W, [], 1)';
+varW = var(W, [], 1)';
+
 %% Plot maximum weight versus risk
 
-% Visualization parameters
-fS = 24;
-mS = 20;
-lW = 5;
-
-% Select large weights
-maxW = max(W, [], 1)';
-
 figure()
-hold on
-% Plot normalized histograms
-% semilogx(maxW, Rh_W, 'k.', 'MarkerSize', mS);
-plot(maxW, Rh_W, 'k.', 'MarkerSize', mS);
-hold on
-xlim = get(gca, 'XLim');
-plot(linspace(xlim(1), xlim(2), 2), [RT(th), RT(th)], 'r', 'LineWidth', lW);
 
-lines = findobj(gcf, 'Type', 'Line');
-legend([lines(end), lines(1)], {'without control', 'true target risk'})
+% Maximum weight versus weighted risk
+plot(linspace(0, max(maxW(:)), 2), [RT(th), RT(th)], 'k', 'LineWidth', lW);
+hold on
+s = scatter(maxW, Rh_W, 'k', 'filled');
+alpha(s, 0.2);
 
 % Axes information
 xlabel('$$\max[w]$$', 'Interpreter', 'latex')
 ylabel('$$\hat{R}_{W}$$', 'Interpreter', 'latex')
-% set(gca, 'YLim', [0 30], 'XLim', [0 1000], 'FontSize', fS);
 set(gca, 'FontSize', fS);
 
 % Set figure information
-title('Maximum weight versus risk');
+title('Maximum weight vs uncontrolled estimate');
 set(gcf, 'Color', 'w', 'Position', [10 100 1000 1000]);
 
 if sav
     saveas(gcf, ['viz/maxW_vs_RhW_siS', num2str(si_S), '_siT' num2str(si_T) '_nR' num2str(nR) '.png']);
 end
 
-
 %% Plot maximum weight versus risk
 
-% Visualization parameters
-fS = 24;
-mS = 20;
-lW = 5;
-
-% Select large weights
-maxW = max(W, [], 1)';
-
 figure()
-hold on
-% Plot normalized histograms
-% semilogx(maxW, Rh_W, 'k.', 'MarkerSize', mS);
-plot(maxW, Rh_CW, 'b.', 'MarkerSize', mS);
-hold on
-xlim = get(gca, 'XLim');
-plot(linspace(xlim(1), xlim(2), 2), [RT(th), RT(th)], 'r', 'LineWidth', lW);
 
-lines = findobj(gcf, 'Type', 'Line');
-legend([lines(end), lines(1)], {'with control', 'true target risk'})
+% Maximum weights versus controlled estimate
+plot(linspace(0, max(maxW(:)), 2), [RT(th), RT(th)], 'k', 'LineWidth', lW);
+hold on
+s = scatter(maxW, Rh_C, 'b', 'filled');
+alpha(s, 0.2);
 
 % Axes information
 xlabel('$$\max[w]$$', 'Interpreter', 'latex')
 ylabel('$$\hat{R}_{C}$$', 'Interpreter', 'latex')
-% set(gca, 'YLim', [0 30], 'XLim', [0 1000], 'FontSize', fS);
 set(gca, 'FontSize', fS);
 
 % Set figure information
-title('Maximum weight versus risk');
+title('Maximum weight vs controlled estimate');
 set(gcf, 'Color', 'w', 'Position', [10 100 1000 1000]);
 
 if sav
     saveas(gcf, ['viz/maxW_vs_RhC_siS', num2str(si_S), '_siT' num2str(si_T) '_nR' num2str(nR) '.png']);
 end
 
-%% Plot weight variance versus risk
-
-% Visualization parameters
-fS = 24;
-mS = 20;
-lW = 5;
-
-% Select large weights
-varW = var(W, [], 1)';
+%% Plot maximum weight versus absolute deviation in risk
 
 figure()
-% Plot normalized histograms
-semilogx(varW, Rh_W, 'k.', 'MarkerSize', mS);
-% plot(varW, Rh_W, 'k.', 'MarkerSize', mS);
-hold on
-xlim = get(gca, 'XLim');
-plot(linspace(xlim(1), xlim(2), 2), [RT(th), RT(th)], 'r', 'LineWidth', lW);
 
-lines = findobj(gcf, 'Type', 'Line');
-legend([lines(end), lines(1)], {'without control', 'true target risk'})
+% Maximum weights versus difference in risks
+s = scatter(maxW, Rh_C - Rh_W, 'r', 'filled');
+alpha(s, 0.2);
+
+% Axes information
+xlabel('$$\max[w]$$', 'Interpreter', 'latex')
+ylabel('$$\hat{R}_{C} - \hat{R}_{W}$$', 'Interpreter', 'latex')
+set(gca, 'FontSize', fS);
+
+% Set figure information
+title('Maximum weight vs risk difference');
+set(gcf, 'Color', 'w', 'Position', [10 100 1000 1000]);
+
+if sav
+    saveas(gcf, ['viz/maxW_vs_RhW-RhC_siS', num2str(si_S), '_siT' num2str(si_T) '_nR' num2str(nR) '.png']);
+end
+
+%% Plot weight variance versus risk
+
+figure()
+
+% Variance of weights versus weighted estimates
+plot(linspace(0, max(maxW(:)), 2), [RT(th), RT(th)], 'k', 'LineWidth', lW);
+hold on
+s = scatter(varW, Rh_W, 'k', 'filled');
+alpha(s, 0.2)
 
 % Axes information
 xlabel('var$$[w]$$', 'Interpreter', 'latex')
 ylabel('$$\hat{R}_W$$', 'Interpreter', 'latex')
-% set(gca, 'YLim', [0 30], 'XLim', [10^-3 10^5], 'FontSize', fS);
-set(gca, 'FontSize', fS);
+set(gca, 'XScale', 'log', 'FontSize', fS);
 
 % Set figure information
-title('Variance of weights versus risk');
+title('Weight variance vs uncontrolled estimate');
 set(gcf, 'Color', 'w', 'Position', [10 100 1000 1000]);
 
 if sav
@@ -235,36 +234,45 @@ end
 
 %% Plot weight variance versus risk
 
-% Visualization parameters
-fS = 24;
-mS = 20;
-lW = 5;
-
-% Select large weights
-varW = var(W, [], 1)';
-
 figure()
-% Plot normalized histograms
-semilogx(varW, Rh_CW, 'b.', 'MarkerSize', mS);
-% plot(varW, Rh_W, 'k.', 'MarkerSize', mS);
-hold on
-xlim = get(gca, 'XLim');
-plot(linspace(xlim(1), xlim(2), 2), [RT(th), RT(th)], 'r', 'LineWidth', lW);
 
-lines = findobj(gcf, 'Type', 'Line');
-legend([lines(end), lines(1)], {'with control', 'true target risk'})
+% Variance of weights versus controlled estimate
+plot(linspace(0, max(maxW(:)), 2), [RT(th), RT(th)], 'k', 'LineWidth', lW);
+hold on
+s = scatter(varW, Rh_C, 'b', 'filled');
+alpha(s, 0.2)
 
 % Axes information
 xlabel('var$$[w]$$', 'Interpreter', 'latex')
-ylabel('$$\hat{R}_{C}$$', 'Interpreter', 'latex')
-% set(gca, 'YLim', [0 30], 'XLim', [10^-3 10^5], 'FontSize', fS);
-set(gca, 'FontSize', fS);
+ylabel('$$\hat{R}_C$$', 'Interpreter', 'latex')
+set(gca, 'XScale', 'log', 'FontSize', fS);
 
 % Set figure information
-title('Variance of weights versus risk');
+title('Weight variance vs controlled estimate');
 set(gcf, 'Color', 'w', 'Position', [10 100 1000 1000]);
 
 if sav
     saveas(gcf, ['viz/varW_vs_RhC_siS', num2str(si_S), '_siT' num2str(si_T) '_nR' num2str(nR) '.png'])
+end
+
+%% Plot weight variance versus risk difference
+
+figure()
+
+% Variance of weights versus difference in risks
+s = scatter(varW, Rh_C - Rh_W, 'r', 'filled');
+alpha(s, 0.2)
+
+% Axes information
+xlabel('var$$[w]$$', 'Interpreter', 'latex')
+ylabel('$$\hat{R}_C - \hat{R}_W$$', 'Interpreter', 'latex')
+set(gca, 'XScale', 'log', 'FontSize', fS);
+
+% Set figure information
+title('Weight variance vs risk difference');
+set(gcf, 'Color', 'w', 'Position', [10 100 1000 1000]);
+
+if sav
+    saveas(gcf, ['viz/varW_vs_RhW-RhC_siS', num2str(si_S), '_siT' num2str(si_T) '_nR' num2str(nR) '.png'])
 end
 
