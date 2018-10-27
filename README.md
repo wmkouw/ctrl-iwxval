@@ -2,13 +2,13 @@
 
 This repository contains experiments and code accompanying the paper:
 
-"A control variate for importance-weighted cross-validation under covariate shift."
+"On reducing sampling variance in covariate shift using control variates."
 
 which is currently under review.
 
 ## Contents:
-
-- __experiments__ contains scripts for running experiments reported in the paper.
+- __experiment-1DG__ contains scripts for running experiments on a 1-dimensional Gaussian distributions setting.
+- __experiment-2DG__ contains scripts for running experiments on a 2-dimensional Gaussian distributions setting.
 - __util__ contains utility functions and algorithms.
 
 ## Contact:
