@@ -1,16 +1,17 @@
-# Covariate shift: control variates
+# Controlled importance-weighted cross-validation
 
-This repository contains experiments and code accompanying the paper:
+This repository contains experiments and visualizations accompanying the paper:
 
-"On reducing sampling variance in covariate shift using control variates."
+"Reducing sampling variance in importance-weighted cross-validation under covariate shift."
 
 which is currently under review.
 
 ## Contents:
-- __experiment-1DG__ contains scripts for running experiments on a 1-dimensional Gaussian distributions setting.
-- __experiment-2DG__ contains scripts for running experiments on a 2-dimensional Gaussian distributions setting.
+- __experiment-1DG__ contains visualizations throughout the paper.
+- __experiment-2DG__ contains experiments on a 2-dimensional Gaussians setting.
+- __experiment-ozone__ contains experiments on the UCI Ozone level detection task.
 - __util__ contains utility functions and algorithms.
 
 ## Contact:
 
-Questions, comments, and bugs can be submitted to the [issues tracker](https://github.com/wmkouw/covshift-ctrlvar/issues).
+Questions and comments can be submitted to the [issues tracker](https://github.com/wmkouw/ctrl-iwxval/issues).

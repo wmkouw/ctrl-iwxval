@@ -11,23 +11,27 @@ savnm = 'results/';
 
 if ~exist('results', 'dir'); mkdir('results'); end
 
+if isempty(gcp('nocreate'))
+    parpool('local', 6)
+end
+
 %%
 
 % Number of folds
 nF = 5;
 
 % Number of repeats
-nR = 1e2;
+nR = 1e5;
 
 % Sample sizes
 N = 50;   % source data
 M = 1000;  % target training
 
 % Importance weight estimator
-iwT = 'true';
+iwT = 'nn';
 
 % Lambda range
-Lambda = logspace(-3,6,201);
+Lambda = logspace(0,3,201);
 nL = length(Lambda);
 
 % Source parameters
@@ -39,11 +43,11 @@ mu_T = [0 0];
 Sigma_T = eye(2);
 
 % Target parameter changes
-rho = 1./2;
-shifttype = 'var';
-delta = 2.^[-1.5:.25:0];
-nD = length(delta);
+gamma = .1:.1:1;
+nG = length(gamma);
 
+% Truncation constant
+max_weight = 10;
 
 %% Equal priors and equal class-posteriors
 
@@ -73,28 +77,31 @@ pZy = @(y,x1,x2,mu_T,Si_T) (pyX(y,x1,x2) .* pZ(x1,x2,mu_T,Si_T))./py(y);
 %%
 
 % Preallocate variables
-W = zeros(nD,N,nR);
+Vw = zeros(nG, nR);
 
-Rh_S = zeros(nD, nL, nR);
-Rh_W = zeros(nD, nL, nR);
-Rh_C = zeros(nD, nL, nR);
-Rh_T = zeros(nD, nL, nR);
+Rh_S = zeros(nG, nL, nR);
+Rh_W = zeros(nG, nL, nR);
+Rh_C = zeros(nG, nL, nR);
+Rh_M = zeros(nG, nL, nR);
+Rh_T = zeros(nG, nL, nR);
 
-lambda_S = NaN(nD, nR);
-lambda_W = NaN(nD, nR);
-lambda_C = NaN(nD, nR);
-lambda_T = NaN(nD, nR);
+lambda_S = NaN(nG, nR);
+lambda_W = NaN(nG, nR);
+lambda_C = NaN(nG, nR);
+lambda_M = NaN(nG, nR);
+lambda_T = NaN(nG, nR);
 
-R_S = zeros(nD, nR);
-R_W = zeros(nD, nR);
-R_C = zeros(nD, nR);
-R_T = zeros(nD, nR);
+R_S = zeros(nG, nR);
+R_W = zeros(nG, nR);
+R_C = zeros(nG, nR);
+R_M = zeros(nG, nR);
+R_T = zeros(nG, nR);
 
-for d = 1:nD
-    disp(['Change in parameter: ' num2str(delta(d))]);
+for g = 1:nG
+    disp(['Change in parameter: ' num2str(gamma(g))]);
     
     % New parameters
-    Sigma_S = delta(d)*eye(2);
+    Sigma_S = gamma(g)*eye(2);
     
     % Define grid for rejection sampling
     nU = 101;
@@ -104,10 +111,10 @@ for d = 1:nD
     u2lS = [-4 4];
     
     % Helper functions
-    pX_yn = @(x1,x2) pXy(-1,x1,x2,mu_S,Sigma_S);
-    pX_yp = @(x1,x2) pXy(+1,x1,x2,mu_S,Sigma_S);
-    pZ_yn = @(x1,x2) pZy(-1,x1,x2,mu_T,Sigma_T);
-    pZ_yp = @(x1,x2) pZy(+1,x1,x2,mu_T,Sigma_T);
+    pS_yn = @(x1,x2) pXy(-1,x1,x2,mu_S,Sigma_S);
+    pS_yp = @(x1,x2) pXy(+1,x1,x2,mu_S,Sigma_S);
+    pT_yn = @(x1,x2) pZy(-1,x1,x2,mu_T,Sigma_T);
+    pT_yp = @(x1,x2) pZy(+1,x1,x2,mu_T,Sigma_T);
     
     for r = 1:nR
         
@@ -120,35 +127,42 @@ for d = 1:nD
         MT = 1.2/sqrt(det(2*pi*Sigma_T));
         
         % Rejection sampling of target data
-        Zn = sampleDist2(pZ_yn,MT,round(M.*py(-1)),u1lT, u2lT);
-        Zp = sampleDist2(pZ_yp,MT,round(M.*py(+1)),u1lT, u2lT);
+        Tn = sampleDist2D(pT_yn,MT,round(M.*py(-1)),u1lT, u2lT);
+        Tp = sampleDist2D(pT_yp,MT,round(M.*py(+1)),u1lT, u2lT);
         
         % Rejection sampling of source data
         MS = 1.2/sqrt(det(2*pi*Sigma_S));
-        Sn = sampleDist2(pX_yn,MS,round(N.*py(-1)),u1lS, u2lS);
-        Sp = sampleDist2(pX_yp,MS,round(N.*py(+1)),u1lS, u2lS);
+        Sn = sampleDist2D(pS_yn,MS,round(N.*py(-1)),u1lS, u2lS);
+        Sp = sampleDist2D(pS_yp,MS,round(N.*py(+1)),u1lS, u2lS);
         
         % Concatenate to datasets
-        Z = [Zn; Zp];
+        T = [Tn; Tp];
         S = [Sn; Sp];
-        yZ = [-ones(size(Zn,1),1); ones(size(Zp,1),1)];
+        yT = [-ones(size(Tn,1),1); ones(size(Tp,1),1)];
         yS = [-ones(size(Sn,1),1); ones(size(Sp,1),1)];
         
         % Obtain importance weights
         switch lower(iwT)
             case 'none'
-                W(d,:,r) = ones(1,nV);
+                W = ones(1,nV);
             case 'true'
-                W(d,:,r) = pZ(S(:,1),S(:,2),mu_T,Sigma_T) ./ pX(S(:,1),S(:,2),mu_S,Sigma_S);
+                W = pZ(S(:,1),S(:,2),mu_T,Sigma_T) ./ pX(S(:,1),S(:,2),mu_S,Sigma_S);
             case 'gauss'
-                W(d,:,r) = iw_Gauss(S,Z,0,realmax);
+                W = iw_Gauss(S,T,0,realmax);
+            case 'kmm'
+                W = iw_KMM(S, T, 'B', 1e4, 'theta', mean(pdist2(S,T),'all'), 'eps', 1e-3);
+            case 'nn'
+                W = iw_NNeW(S, T, 'Laplace', true);
             otherwise
                 error('Unknown importance weight estimator');
         end
         
+        % Compute variance of weights
+        Vw(g, r) = nanvar(W);
+        
         % Augment data
-        Z = [Z ones(M, 1)];
-        S = [S ones(N, 1)];
+        Ta = [T ones(M, 1)];
+        Sa = [S ones(N, 1)];
         
         % Class indices
         ixp = find(yS==+1);
@@ -167,75 +181,82 @@ for d = 1:nD
         L_S = zeros(N, nL);
         L_W = zeros(N, nL);
         L_C = zeros(N, nL);
+        L_M = zeros(N, nL);
         L_T = zeros(M, nL);
         
         for f = 1:nF
             
             % Split source data into training and validation
-            X = S(f ~= folds, :);
+            X = Sa(f ~= folds, :);
             yX = yS(f ~= folds);
             
-            V = S(f == folds, :);
+            V = Sa(f == folds, :);
             yV = yS(f == folds);
             
-            % Split weights for validation
-            WV = W(d, f == folds, r)';
+            % Split weights
+            Wf = W(f == folds);
+            Wg = W(f ~= folds);
             
             for l = 1:nL
                 
                 % Train classifier
-                theta = (X'*X + Lambda(l)*eye(3))\(X'*yX);
+                theta = (X'*diag(Wg)*X + Lambda(l)*eye(3))\(X'*diag(Wg)*yX);
                 
                 % Compute empirical risks
                 L_S(f==folds, l) = (V*theta - yV).^2;
-                L_W(f==folds, l) = (V*theta - yV).^2 .* WV;
-                L_T(:, l) = (Z*theta - yZ).^2;
+                L_W(f==folds, l) = (V*theta - yV).^2 .* Wf;
+                L_M(f==folds, l) = (V*theta - yV).^2 .* min(max_weight, Wf);
+                L_T(:, l) = (Ta*theta - yT).^2;
                 
                 % Compute beta
-                weighted_loss = (V*theta - yV).^2 .*WV;
+                weighted_loss = (V*theta - yV).^2 .* Wf';
                 a_i = weighted_loss - mean(weighted_loss, 1);
-                b_i = WV - mean(WV);
+                b_i = Wf - mean(Wf);
                 beta = sum( a_i .* b_i, 1) ./ sum( b_i.^2, 1);
                 
                 % Compute controlled risk
-                L_C(f==folds, l) = (V*theta - yV).^2 .* WV - beta.*(WV - 1);
+                L_C(f==folds, l) = (V*theta - yV).^2 .* Wf - beta'.*(Wf - 1);
                 
             end
         end
         
         % Compute empirical risks
-        Rh_S(d, :, r) = mean(L_S, 1)';
-        Rh_W(d, :, r) = mean(L_W, 1)';
-        Rh_C(d, :, r) = mean(L_C, 1)';
-        Rh_T(d, :, r) = mean(L_T, 1)';
+        Rh_S(g, :, r) = mean(L_S, 1)';
+        Rh_W(g, :, r) = mean(L_W, 1)';
+        Rh_C(g, :, r) = mean(L_C, 1)';
+        Rh_M(g, :, r) = mean(L_M, 1)';
+        Rh_T(g, :, r) = mean(L_T, 1)';
         
         % Find best lambda minima
-        [~, lambda_S(d, r)] = min(Rh_S(d, :, r), [], 2);
-        [~, lambda_W(d, r)] = min(Rh_W(d, :, r), [], 2);
-        [~, lambda_C(d, r)] = min(Rh_C(d, :, r), [], 2);
-        [~, lambda_T(d, r)] = min(Rh_T(d, :, r), [], 2);
+        [~, lambda_S(g, r)] = min(Rh_S(g, :, r), [], 2);
+        [~, lambda_W(g, r)] = min(Rh_W(g, :, r), [], 2);
+        [~, lambda_C(g, r)] = min(Rh_C(g, :, r), [], 2);
+        [~, lambda_M(g, r)] = min(Rh_M(g, :, r), [], 2);
+        [~, lambda_T(g, r)] = min(Rh_T(g, :, r), [], 2);
         
         % Classifier on whole set
-        eta = @(l) (S'*S + Lambda(l)*eye(3))\(S'*yS);
+        eta = @(l) (Sa'*diag(W)*Sa + Lambda(l)*eye(3))\(Sa'*diag(W)*yS);
         
         % Compute target risk
-        RT = @(theta) mean( (Z*theta - yZ).^2, 1);
+        RT = @(theta) mean( (Ta*theta - yT).^2, 1);
         
         % True target risks for selected lambda's
-        R_S(d, r) = RT( eta(lambda_S(d,r)) );
-        R_W(d, r) = RT( eta(lambda_W(d,r)) );
-        R_C(d, r) = RT( eta(lambda_C(d,r)) );
-        R_T(d, r) = RT( eta(lambda_T(d,r)) );
+        R_S(g, r) = RT( eta(lambda_S(g,r)) );
+        R_W(g, r) = RT( eta(lambda_W(g,r)) );
+        R_C(g, r) = RT( eta(lambda_C(g,r)) );
+        R_M(g, r) = RT( eta(lambda_M(g,r)) );
+        R_T(g, r) = RT( eta(lambda_T(g,r)) );
 
     end
 end
 
-
+% Write results to file
 di = 1; while exist([savnm 'exp_l2est_2DG_iw-' iwT '_' num2str(di) '.mat'], 'file'); di = di+1; end
 fn = [savnm 'exp_l2est_2DG_iw-' iwT '_' num2str(di) '.mat'];
 disp(['Done. Writing to ' fn]);
-save(fn, 'delta', 'Lambda', 'W', 'R_S', 'R_W', 'R_C', 'R_T', ...
-    'lambda_S', 'lambda_W', 'lambda_C', 'lambda_T', ...
-    'Rh_T', 'Rh_S', 'Rh_W', 'Rh_C', 'Rh_T');
+save(fn, 'nR', 'gamma', 'Lambda', 'Vw', 'R_S', 'R_W', 'R_C', 'R_T', 'R_M', ...
+    'lambda_S', 'lambda_W', 'lambda_C', 'lambda_T', 'lambda_M', ...
+    'Rh_T', 'Rh_S', 'Rh_W', 'Rh_C', 'Rh_T', 'Rh_M', '-v7.3');
 
-
+% Close parpool
+delete(gcp('nocreate'))

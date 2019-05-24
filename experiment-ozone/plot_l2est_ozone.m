@@ -1,14 +1,13 @@
-% Plot results from 2D Gaussian experiment
+% Plot results from ozone experiment
 %
 % Author: Wouter M. Kouw
-% Last updated: 27-10-2018
+% Last updated: 21-01-2019
 
 close all;
 clearvars;
 
+% Saving
 save_figs = true;
-san = false;
-viz = false;
 
 if ~exist('viz', 'dir'); mkdir('viz'); end
 
@@ -16,16 +15,16 @@ if ~exist('viz', 'dir'); mkdir('viz'); end
 
 savnm = 'results/';
 iwT = 'gauss';
+hyperparam = '0';
 
-di = 1; while exist([savnm 'exp_l2est_2DG_iw-' iwT '_' num2str(di) '.mat'], 'file'); di = di+1; end
-di = 4;
-fn = [savnm 'exp_l2est_2DG_iw-' iwT '_' num2str(di-1) '.mat'];
+di = 1; while exist([savnm 'exp_l2est_ozone_iw-' iwT '_hyperparam' num2str(hyperparam) '_' num2str(di) '.mat'], 'file'); di = di+1; end
+fn = [savnm 'exp_l2est_ozone_iw-' iwT '_hyperparam' num2str(hyperparam) '_' num2str(di-1) '.mat'];
 disp(['Loading ' fn]);
 load(fn);
 
 %% Experimental parameter
 
-gamma = delta;
+% Number of values for gamma
 nG = length(gamma);
 
 % Plot settings
@@ -104,7 +103,7 @@ for g = 1:nG
     
 end
 
-%% Plot
+%% Double axis plot
 
 figure()
 hold on
@@ -112,7 +111,7 @@ hold on
 % errorbar(gamma, mRS, semS, 'Color', clrs(2,:), 'LineWidth', 2)
 errorbar(gamma, mRW_lim, semRW_lim, '--', 'Color', clrs(2,:), 'LineWidth', lW)
 errorbar(gamma*1.01, mRC_lim, semRC_lim, '--', 'Color', clrs(3,:), 'LineWidth', lW)
-% errorbar(gamma*1.02, mRT_lim, semRT_lim, '-', 'Color', clrs(4,:), 'LineWidth', lW)
+% errorbar(gamma*1.02, mRT_lim, semRT_lim, '--', 'Color', clrs(4,:), 'LineWidth', lW)
 
 % errorbar(gamma, mRS, semS, 'Color', clrs(2,:), 'LineWidth', 2)
 errorbar(gamma, mRW_all, semRW_all, '-', 'Color', clrs(2,:), 'LineWidth', lW)
@@ -120,23 +119,21 @@ errorbar(gamma*1.01, mRC_all, semRC_all, '-', 'Color', clrs(3,:), 'LineWidth', l
 errorbar(gamma*1.02, mRT_all, semRT_all, '-', 'Color', clrs(4,:), 'LineWidth', lW)
 
 ylabel('Mean target risk ($\bar{R}_{\cal T}$)', 'interpreter', 'latex')
-set(gca, 'XScale', 'log', 'XLim', [gamma(1), gamma(end)]);
-set(gca, 'YLim', [0.65, 0.85]);
+set(gca, 'XScale', 'lin', 'XLim', [gamma(1), gamma(end)]);
+% set(gca, 'YLim', [0.9, 1.5]);
 
 % Set axes properties
 xlabel('Source variance ($\gamma$)', 'interpreter', 'latex')
 % title(['Mean selected lambdas' char(newline) 'for V[w] > ' num2str(cutoff)], 'FontSize', fS-10);
 % legend({'$\hat{R}_{\cal S}$', '$\hat{R}_{\cal W}$', '$\hat{R}_{\cal \beta}$', '$\hat{R}_{\cal T}$'}, 'Interpreter', 'latex', 'Location', 'NorthEastOutside', 'FontSize', fS+5)
-% legend({'$\hat{R}_{\cal W}$ - large', '$\hat{R}_{\cal \beta}$ - large', '$\hat{R}_{\cal T}$ - large', '$\hat{R}_{\cal W}$ - all', '$\hat{R}_{\cal \beta}$ - all', '$\hat{R}_{\cal T}$ - all'}, 'Interpreter', 'latex', 'Location', 'NorthEast', 'FontSize', fS)
 legend({'$\hat{R}_{\cal W}$ - large', '$\hat{R}_{\hat{\beta}}$ - large', '$\hat{R}_{\cal W}$ - all', '$\hat{R}_{\hat{\beta}}$ - all', '$\hat{R}_{\cal T}$'}, 'Interpreter', 'latex', 'Location', 'NorthEast', 'FontSize', fS)
-
 set(gca, 'FontSize', fS);
 set(gcf, 'Color', 'w', 'Position', [100 100 1200 700])
 
 % Write figure to file
 if save_figs
-    saveas(gcf, ['viz/2DG_yy_iwe-' iwT '_Vwcut' num2str(cutoff) '_nR' num2str(nR) '.eps'], 'epsc')
-    saveas(gcf, ['viz/2DG_yy_iwe-' iwT '_Vwcut' num2str(cutoff) '_nR' num2str(nR) '.png'])
+    saveas(gcf, ['viz/ozone_yy_iwe-' iwT '_Vwcut' num2str(cutoff) '_nR' num2str(nR) '.eps'], 'epsc')
+    saveas(gcf, ['viz/ozone_yy_iwe-' iwT '_Vwcut' num2str(cutoff) '_nR' num2str(nR) '.png'])
 end
 
 
