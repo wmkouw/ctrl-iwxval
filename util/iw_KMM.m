@@ -19,17 +19,22 @@ parse(p, varargin{:});
 [M,~] = size(Z);
 
 % Optimization options
-options.Display = 'valid';
+options.Display = 'off';
 % options.Algorithm = 'active-set';
 options.TolCon = 1e-5;
 
 % Constraints
 if p.Results.eps==0
-    eps = [p.Results.B./sqrt(N) p.Results.B./sqrt(N)];
+    if p.Results.B == Inf
+        error(['Weight sum tolerance is infinite. Either lower B  ' ...
+               'to a finite value or set epsilon to a non-zero value.']);
+    else
+        eps = [p.Results.B./sqrt(N) p.Results.B./sqrt(N)];
+    end
 elseif length(p.Results.eps)==2
     eps = p.Results.eps;
 else
-    eps = [p.Results.eps p.Results.eps];
+    eps = [p.Results.eps p.Results.eps]; 
 end
 A = [ones(1,N); -ones(1,N)];
 b = [N*(eps(1)+1); N*(eps(2)-1)]+p.Results.off;
@@ -37,7 +42,7 @@ lb = zeros(N,1);
 ub = p.Results.B*ones(N,1);
 
 % Optimal bandwidth crossvalidation
-if p.Results.theta==0
+if p.Results.theta == 0
     
     % Maximum Mean Discrepancy
     MMD = @(beta,K,k) 1./size(K,1)^2*beta'*K*beta - 2./size(K,1)^2*k'*beta;
@@ -78,14 +83,37 @@ if p.Results.theta==0
             fprintf('  score=%g,  sigma=%g\n',score,theta)
         end
     end
+    theta(1) = theta;
+    theta(2) = theta;
+    
     fprintf('Final sigma = %g\n',theta)
+    
+elseif p.Results.theta == -1
+    
+    if D <= 2
+        [~, ~, bw] = ksdensity(X, X);
+        theta(1) = mean(bw);
+        
+        [~, ~, bw] = ksdensity(Z, X);
+        theta(2) = mean(bw);
+        
+    else
+        [~, ~, bw] = mvksdensity(X, X);
+        theta(1) = mean(bw);
+        
+        [~, ~, bw] = mvksdensity(Z, X);
+        theta(2) = mean(bw);
+    end
 else
-    theta = p.Results.theta;
+    
+    theta(1) = p.Results.theta;
+    theta(2) = p.Results.theta;
+
 end
 
 % Compute kernels with optimized theta
-KXX = exp(-pdist2(X,X)./theta);
-KXZ = exp(-pdist2(X,Z)./theta);
+KXX = exp(-pdist2(X,X)./(2*theta(1)))./(2*pi*theta(1));
+KXZ = exp(-pdist2(X,Z)./(2*theta(2)))./(2*pi*theta(2));
 
 % Optimize
 iw = quadprog(KXX,mean(KXZ,2),A,b,[],[],lb, ub, [], options);

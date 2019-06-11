@@ -5,7 +5,7 @@ function [iw] = iw_Gauss(X, Z, varargin)
 
 % Parse optionals
 p = inputParser;
-addOptional(p, 'lambda', realmin);
+addOptional(p, 'l2', realmin);
 addOptional(p, 'clip', realmax);
 addOptional(p, 'viz', false);
 parse(p, varargin{:});
@@ -14,10 +14,10 @@ parse(p, varargin{:});
 [~,D] = size(X);
 
 % Compute probability under target Gaussian distribution
-pZ_X = mvnpdf(X, mean(Z,1), cov(Z)+p.Results.lambda*eye(D));
+pZ_X = mvnpdf(X, mean(Z,1), cov(Z)+p.Results.l2*eye(D));
 
 % Compute probability under source Gaussian distribution
-pX_X = mvnpdf(X, mean(X,1), cov(X)+p.Results.lambda*eye(D));
+pX_X = mvnpdf(X, mean(X,1), cov(X)+p.Results.l2*eye(D));
 
 % Compute ratio of probabilities
 iw = pZ_X ./ pX_X;
