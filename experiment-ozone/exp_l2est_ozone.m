@@ -22,8 +22,8 @@ ixRem = sum(isnan(D),2)>0;
 D(ixRem,:) = [];
 y(ixRem) = [];
 
+% Scale data
 D = zscore(D,[],1);
-% D = D - mean(D, 1);
 
 % Reduce dim
 dim = 10;
@@ -58,7 +58,7 @@ nL = length(Lambda);
 mu_S = -ones(1,dim);
 
 % Target parameter changes
-gamma = .1:.1:1;
+gamma = .5:.1:1;
 nG = length(gamma);
 
 % Weight truncation
@@ -112,17 +112,53 @@ parfor r = 1:nR
         % Obtain importance weights
         switch lower(iwT)
             case 'none'
+                % No weighting
                 wi = ones(1,nV);
+                
             case 'gauss'
-                wi = iw_Gauss(S, DC, 'l2', hyperparam);
+                
+                % Ratio of Gaussian distributions
+                wi = iw_Gauss(S, DC, 'l2', 0);
+                
             case 'kde'
-                wi = iw_kde(S, DC, 'bw', hyperparam, 'self_normalize', false);
-            case 'kmm'
-                wi = iw_KMM(S, DC, 'theta', 1);
+                % Sorted distance from source to target
+                nnd = sort(pdist2(S, DC), 2, 'ascend');
+
+                % Average distance to 5-th nearest neighbour
+                hyperparam = mean(nnd(:, 5), 1);
+                
+                % Kernel density estimator
+                wi = iw_kde(S, DC, ...
+                            'bw', hyperparam, ...
+                            'self_normalize', false);
+            case 'kmm'  
+                
+                % Sorted distance from source to target
+                nnd = sort(pdist2(S, DC), 2, 'ascend');
+
+                % Average distance to 5-th nearest neighbour
+                hyperparam = mean(nnd(:, 5), 1);
+            
+                % Kernel mean matching
+                wi = iw_KMM(S, DC, ...
+                            'theta', hyperparam, ...
+                            'B', Inf, ...
+                            'eps', 1e-6);
             case 'kliep'
-                wi = iw_KLIEP(S, DC,0,realmax);
-            case 'nnew'
-                wi = iw_NNeW(S, DC, 0,realmax, 'Laplace', 1);
+                
+                % Sorted distance from source to target
+                nnd = sort(pdist2(S, DC), 2, 'ascend');
+
+                % Average distance to 5-th nearest neighbour
+                hyperparam = mean(nnd(:, 5), 1);
+            
+                % Kullback-Leibler Importance-Estimation Procedure
+                wi = iw_KLIEP(S, DC, 'sigma', hyperparam);
+                
+            case 'nn'
+                % Nearest-neighbour-based weighting
+                wi = iw_NNeW(S, DC, 0, realmax, 'Laplace', 1);
+                
             otherwise
                 error('Unknown importance weight estimator');
         end
@@ -224,7 +260,10 @@ parfor r = 1:nR
 end 
 
 % Write results to file
-di = 1; while exist([savnm 'exp_l2est_ozone_iw-' iwT '_hyperparam' num2str(hyperparam) '_' num2str(di) '.mat'], 'file'); di = di+1; end
+di = 1; 
+while exist([savnm 'exp_l2est_ozone_iw-' iwT '_hyperparam' num2str(hyperparam) '_' num2str(di) '.mat'], 'file')
+    di = di+1; 
+end
 fn = [savnm 'exp_l2est_ozone_iw-' iwT '_hyperparam' num2str(hyperparam) '_' num2str(di) '.mat'];
 disp(['Done. Writing to ' fn]);
 save(fn, 'nR', 'gamma', 'Lambda', 'Vw', 'hyperparam', ...

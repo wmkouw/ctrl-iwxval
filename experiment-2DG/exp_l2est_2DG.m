@@ -9,10 +9,14 @@ san = false;
 viz = false;
 savnm = 'results/';
 
-if ~exist('results', 'dir'); mkdir('results'); end
+if ~exist('results', 'dir')
+    mkdir('results'); 
+end
+
+%% Multi-thread options
 
 if isempty(gcp('nocreate'))
-    parpool('local', 6)
+    parpool('local', 3)
 end
 
 %%
@@ -28,7 +32,7 @@ N = 50;   % source data
 M = 1000;  % target training
 
 % Importance weight estimator
-iwT = 'nn';
+iwT = 'gauss';
 
 % Lambda range
 Lambda = logspace(0,3,201);
@@ -43,7 +47,7 @@ mu_T = [0 0];
 Sigma_T = eye(2);
 
 % Target parameter changes
-gamma = .1:.1:1;
+gamma = .5:.1:1;
 nG = length(gamma);
 
 % Truncation constant
@@ -78,6 +82,7 @@ pZy = @(y,x1,x2,mu_T,Si_T) (pyX(y,x1,x2) .* pZ(x1,x2,mu_T,Si_T))./py(y);
 
 % Preallocate variables
 Vw = zeros(nG, nR);
+Mw = zeros(nG, nR);
 
 Rh_S = zeros(nG, nL, nR);
 Rh_W = zeros(nG, nL, nR);
@@ -116,7 +121,7 @@ for g = 1:nG
     pT_yn = @(x1,x2) pZy(-1,x1,x2,mu_T,Sigma_T);
     pT_yp = @(x1,x2) pZy(+1,x1,x2,mu_T,Sigma_T);
     
-    for r = 1:nR
+    parfor r = 1:nR
         
         % Report progress over repetitions
         if (rem(r,nR./10)==1)
@@ -148,9 +153,16 @@ for g = 1:nG
             case 'true'
                 W = pZ(S(:,1),S(:,2),mu_T,Sigma_T) ./ pX(S(:,1),S(:,2),mu_S,Sigma_S);
             case 'gauss'
-                W = iw_Gauss(S,T,0,realmax);
+                W = iw_Gauss(S, T, 0, realmax);
+            case 'kliep'
+                % Bandwidth selection
+                [~, ~, bw] = ksdensity(S, T);
+                
+                W = iw_KLIEP(S, T, 'sigma', mean(bw), 'verbose', false);
             case 'kmm'
-                W = iw_KMM(S, T, 'B', 1e4, 'theta', mean(pdist2(S,T),'all'), 'eps', 1e-3);
+                
+                W = iw_KMM(S, T, 'B', Inf, 'theta', -1, 'eps', 1e-6);
+                
             case 'nn'
                 W = iw_NNeW(S, T, 'Laplace', true);
             otherwise
@@ -159,6 +171,7 @@ for g = 1:nG
         
         % Compute variance of weights
         Vw(g, r) = nanvar(W);
+        Mw(g, r) = max(W(:));
         
         % Augment data
         Ta = [T ones(M, 1)];
@@ -254,8 +267,9 @@ end
 di = 1; while exist([savnm 'exp_l2est_2DG_iw-' iwT '_' num2str(di) '.mat'], 'file'); di = di+1; end
 fn = [savnm 'exp_l2est_2DG_iw-' iwT '_' num2str(di) '.mat'];
 disp(['Done. Writing to ' fn]);
-save(fn, 'nR', 'gamma', 'Lambda', 'Vw', 'R_S', 'R_W', 'R_C', 'R_T', 'R_M', ...
+save(fn, 'nR', 'gamma', 'Lambda', 'Vw', 'Mw', ...
     'lambda_S', 'lambda_W', 'lambda_C', 'lambda_T', 'lambda_M', ...
+    'R_S', 'R_W', 'R_C', 'R_T', 'R_M', ...
     'Rh_T', 'Rh_S', 'Rh_W', 'Rh_C', 'Rh_T', 'Rh_M', '-v7.3');
 
 % Close parpool

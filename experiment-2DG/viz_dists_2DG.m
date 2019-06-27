@@ -33,8 +33,8 @@ set(gca, 'FontSize', p.Results.fS)
 set(gcf, 'Color', 'w', 'Position', [100 100 800 600]);
 xlabel('$x_1$', 'Interpreter', 'latex', 'FontSize', p.Results.fS + 10);
 ylabel('$x_2$', 'Interpreter', 'latex', 'FontSize', p.Results.fS + 10);
-legend({'p_S(x | y = +1)', 'p_S(x | y =  -1)'}, 'FontSize', p.Results.fS-5)
-title(['Source conditional distributions' newline '$$p_{\cal S}(x|y)$$'], 'Interpreter', 'latex', 'FontSize', p.Results.fS + 10)
+% legend({'p_S(x | y = +1)', 'p_S(x | y =  -1)'}, 'FontSize', p.Results.fS-5)
+% title(['Source conditional distributions' newline '$$p_{\cal S}(x|y)$$'], 'Interpreter', 'latex', 'FontSize', p.Results.fS + 10)
 
 % Write figure to file
 saveas(gcf, p.Results.savnm{1}, 'epsc');
@@ -53,8 +53,8 @@ set(gca, 'FontSize', p.Results.fS)
 set(gcf, 'Color', 'w', 'Position', [100 100 800 600]);
 xlabel('$x_1$', 'Interpreter', 'latex', 'FontSize', p.Results.fS + 10);
 ylabel('$x_2$', 'Interpreter', 'latex', 'FontSize', p.Results.fS + 10);
-title(['Posterior distributions' newline '$$p_{\cal S}(y|x) = p_{\cal T}(y|x)$$'], 'Interpreter', 'latex', 'FontSize', p.Results.fS + 10)
-legend({'y = +1 | x', 'y =  -1 | x'}, 'FontSize', p.Results.fS-5)
+% title(['Posterior distributions' newline '$$p_{\cal S}(y|x) = p_{\cal T}(y|x)$$'], 'Interpreter', 'latex', 'FontSize', p.Results.fS + 10)
+% legend({'y = +1 | x', 'y =  -1 | x'}, 'FontSize', p.Results.fS-5)
 
 % Write figure to file
 saveas(gcf, p.Results.savnm{2}, 'epsc');
@@ -72,8 +72,8 @@ set(gca, 'FontSize', p.Results.fS)
 set(gcf, 'Color', 'w', 'Position', [100 100 800 600]);
 xlabel('$x_1$', 'Interpreter', 'latex', 'FontSize', p.Results.fS + 10);
 ylabel('$x_2$', 'Interpreter', 'latex', 'FontSize', p.Results.fS + 10);
-title(['Conditional distributions' newline '$$p_{\cal T}(x|y)$$'], 'Interpreter', 'latex', 'FontSize', p.Results.fS + 10)
-legend({'p_T(x | y = +1)', 'p_T(x | y =  -1)'}, 'FontSize', p.Results.fS-5)
+% title(['Conditional distributions' newline '$$p_{\cal T}(x|y)$$'], 'Interpreter', 'latex', 'FontSize', p.Results.fS + 10)
+% legend({'p_T(x | y = +1)', 'p_T(x | y =  -1)'}, 'FontSize', p.Results.fS-5)
 
 % Write figure to file
 saveas(gcf, p.Results.savnm{3}, 'epsc');
@@ -95,8 +95,8 @@ set(gca, 'FontSize', p.Results.fS)
 set(gcf, 'Color', 'w', 'Position', [100 100 800 600]);
 xlabel('$x_1$', 'Interpreter', 'latex', 'FontSize', p.Results.fS + 10);
 ylabel('$x_2$', 'Interpreter', 'latex', 'FontSize', p.Results.fS + 10);
-title(['Data marginal distributions' newline '$$p(x)$$'], 'Interpreter', 'latex', 'FontSize', p.Results.fS + 10)
-legend({'p_S(x)','p_T(x)'});
+% title(['Data marginal distributions' newline '$$p(x)$$'], 'Interpreter', 'latex', 'FontSize', p.Results.fS + 10)
+% legend({'p_S(x)','p_T(x)'});
 
 % Write figure to file
 saveas(gcf, p.Results.savnm{4}, 'epsc');

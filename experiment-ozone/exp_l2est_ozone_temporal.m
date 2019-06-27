@@ -8,7 +8,7 @@ sav = true;
 viz = false;
 savnm = 'results/';
 
-Start a parallel pool
+% Start a parallel pool
 if isempty(gcp('nocreate'))
     parpool('local', 6)
 end
@@ -22,8 +22,8 @@ ixRem = sum(isnan(D),2)>0;
 D(ixRem,:) = [];
 y(ixRem) = [];
 
+% Scale data
 D = zscore(D,[],1);
-% D = D - mean(D, 1);
 
 % Reduce dim
 dim = 10;
@@ -44,10 +44,10 @@ nF = 5;
 nR = 1e5;
 
 % Sample sizes
-NS = 80;   % source data
+NS = 100;   % source data
 
 % Importance weight estimator
-iwT = 'kmm';
+iwT = 'gauss';
 hyperparam = 0;
 
 % Lambda range
@@ -58,7 +58,7 @@ nL = length(Lambda);
 mu_S = -ones(1,dim);
 
 % Target parameter changes
-gamma = .1:.1:1;
+gamma = .5:.1:1;
 nG = length(gamma);
 
 % Weight truncation
@@ -84,7 +84,6 @@ R_W = zeros(nG, nR);
 R_C = zeros(nG, nR);
 R_M = zeros(nG, nR);
 R_T = zeros(nG, nR);
-wi = 0;
 
 parfor r = 1:nR
     % Report progress
@@ -109,16 +108,6 @@ parfor r = 1:nR
         S = [DC(ixSn,:); DC(ixSp,:)];
         yS = [-ones(length(ixSn),1); ones(length(ixSp),1)];
         
-        % Check for hyperparameter estimate
-        if hyperparameter == 0
-            
-            % Sorted distance from source to target
-            nnd = sort(pdist2(S, DC), 2, 'ascend');
-
-            % Average distance to 5-th nearest neighbour
-            hyperparameter = mean(nnd(:, 5), 1);
-        end
-        
         % Obtain importance weights
         switch lower(iwT)
             case 'none'
@@ -126,35 +115,56 @@ parfor r = 1:nR
                 wi = ones(1,nV);
                 
             case 'gauss'
+                
                 % Ratio of Gaussian distributions
-                wi = iw_Gauss(S, DC, 'l2', hyperparam);
+                wi = iw_Gauss(S, DC, 'l2', 0);
                 
             case 'kde'
+                % Sorted distance from source to target
+                nnd = sort(pdist2(S, DC), 2, 'ascend');
+
+                % Average distance to 5-th nearest neighbour
+                hyperparam = mean(nnd(:, 5), 1);
+                
                 % Kernel density estimator
                 wi = iw_kde(S, DC, ...
                             'bw', hyperparam, ...
                             'self_normalize', false);
-            case 'kmm'                 
+            case 'kmm'  
+                
+                % Sorted distance from source to target
+                nnd = sort(pdist2(S, DC), 2, 'ascend');
+
+                % Average distance to 5-th nearest neighbour
+                hyperparam = mean(nnd(:, 5), 1);
+            
                 % Kernel mean matching
                 wi = iw_KMM(S, DC, ...
-                            'theta', hyperparameter, ...
+                            'theta', hyperparam, ...
                             'B', Inf, ...
-                            'eps', 0);
+                            'eps', 1e-6);
             case 'kliep'
+                
+                % Sorted distance from source to target
+                nnd = sort(pdist2(S, DC), 2, 'ascend');
+
+                % Average distance to 5-th nearest neighbour
+                hyperparam = mean(nnd(:, 5), 1);
+            
                 % Kullback-Leibler Importance-Estimation Procedure
-                wi = iw_KLIEP(S, DC, 'sigma', hyperparameter);
+                wi = iw_KLIEP(S, DC, 'sigma', hyperparam);
                 
             case 'nn'
                 % Nearest-neighbour-based weighting
-                wi = iw_NNeW(S, DC, 0,realmax, 'Laplace', 1);
+                wi = iw_NNeW(S, DC, 0, realmax, 'Laplace', 1);
                 
             otherwise
                 error('Unknown importance weight estimator');
         end
         
         % Compute variance of weights
-        Vw(g, r) = nanvar(W);
-        Mw(g, r) = max(W(:));
+        Vw(g, r) = nanvar(wi);
+        Mw(g, r) = max(wi(:));
         
         % Augment data
         Sa = [S ones(NS,1)];
@@ -253,10 +263,13 @@ parfor r = 1:nR
 end 
 
 % Write results to file
-di = 1; while exist([savnm 'exp_l2est_ozone_iw-' iwT '_hyperparam' num2str(hyperparam) '_' num2str(di) '.mat'], 'file'); di = di+1; end
-fn = [savnm 'exp_l2est_ozone_iw-' iwT '_hyperparam' num2str(hyperparam) '_' num2str(di) '.mat'];
+di = 1; 
+while exist([savnm 'exp_l2est_ozone_iw-' iwT '_hyperparam0_' num2str(di) '.mat'], 'file')
+    di = di+1; 
+end
+fn = [savnm 'exp_l2est_ozone_iw-' iwT '_hyperparam0_' num2str(di) '.mat'];
 disp(['Done. Writing to ' fn]);
-save(fn, 'nR', 'gamma', 'Lambda', 'Vw', 'Mw', 'hyperparam', ...
+save(fn, 'nR', 'gamma', 'Lambda', 'Vw', 'Mw', ...
     'R_S', 'R_W', 'R_C', 'R_T', 'R_M', ...
     'lambda_S', 'lambda_W', 'lambda_C', 'lambda_T', 'lambda_M', ...
     'Rh_T', 'Rh_S', 'Rh_W', 'Rh_C', 'Rh_T', 'Rh_M');

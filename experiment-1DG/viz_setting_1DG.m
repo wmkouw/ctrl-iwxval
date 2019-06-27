@@ -12,15 +12,15 @@ mkdir('viz');
 sav = true;
 
 % Visualization parameters
-fS = 20;
+fS = 25;
 lW = 4;
 xx = linspace(-5,5,1001);
 
 %% Problem setting
 
 % Source parameters
-mu_S = 0;
-si_S = sqrt(.5);
+mu_S = -1;
+si_S = 0.75;
 
 % Target parameters
 mu_T = 0;
@@ -62,6 +62,26 @@ pT_yn = @(x) pTY(-1,x);
 pT_yp = @(x) pTY(+1,x);
 
 %% Data distributions
+
+
+% Initialize figure for both domains
+fg10 = figure(10);
+hold on
+
+% Plot source class-conditional distributions, p_S(x|y)
+plot(xx, pS(xx), 'k', 'LineWidth', lW)
+plot(xx, pT(xx), 'k', 'LineStyle', ':', 'LineWidth', lW)
+
+% Axes information
+xlabel('$$x$$', 'Interpreter', 'latex');
+ylabel('$$p(x)$$', 'Interpreter', 'latex');
+legend({'$$p_{\cal S}$$', '$$p_{\cal T}$$'}, 'Interpreter', 'latex', 'FontSize', fS+5);
+set(gca, 'XLim', [-3 3], 'YLim', [0 0.6], 'FontSize', fS);
+set(fg10, 'Color', 'w', 'Position', [0 0 1200 400]);
+
+if sav
+    saveas(fg10, ['viz/1Dsetting_datadists_' num2str(si_T, 3) '.eps'], 'epsc');
+end
 
 % Initialize figure for source domain
 fg1 = figure(1);

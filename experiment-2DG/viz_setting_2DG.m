@@ -85,13 +85,13 @@ for d = 1:nD
     MT = 1.2/sqrt(det(2*pi*Sigma_T));
     
     % Rejection sampling of target data
-    Zn = sampleDist2(pZ_yn,MT,round(M.*py(-1)),u1lT, u2lT);
-    Zp = sampleDist2(pZ_yp,MT,round(M.*py(+1)),u1lT, u2lT);
+    Zn = sampleDist2D(pZ_yn,MT,round(M.*py(-1)),u1lT, u2lT);
+    Zp = sampleDist2D(pZ_yp,MT,round(M.*py(+1)),u1lT, u2lT);
     
     % Rejection sampling of source data
     MS = 1.2/sqrt(det(2*pi*Sigma_S));
-    Xn = sampleDist2(pX_yn,MS,round(N.*py(-1)),u1lS, u2lS);
-    Xp = sampleDist2(pX_yp,MS,round(N.*py(+1)),u1lS, u2lS);
+    Xn = sampleDist2D(pX_yn,MS,round(N.*py(-1)),u1lS, u2lS);
+    Xp = sampleDist2D(pX_yp,MS,round(N.*py(+1)),u1lS, u2lS);
     
     % Concatenate to datasets
     Z = [Zn; Zp];

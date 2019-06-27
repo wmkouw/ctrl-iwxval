@@ -86,7 +86,7 @@ saveas(gcf, 'viz/prob_wc_v01.eps', 'epsc');
 mu_S = -1;
 
 % Source std dev
-gamma = 0.6:0.1:0.9;
+gamma = 0.7:0.1:0.9;
 nG = length(gamma);
 
 % Span of weights
