@@ -2,9 +2,9 @@
 
 This repository contains experiments and visualizations accompanying the paper:
 
-"Reducing sampling variance in importance-weighted cross-validation under covariate shift."
+"Robust importance-weighted cross-validation under sample selection bias",
 
-which is currently under review.
+published in the proceedings of the International Workshop on Machine Learning for Signal Processing, 2019.
 
 ## Contents:
 - __experiment-1DG__ contains visualizations throughout the paper.
